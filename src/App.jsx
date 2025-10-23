@@ -1,7 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 
-const DEFAULT_TEXT = `Memorize your favourite passages by revealing them as you scroll. Paste or type any text below and use the scrollable panel to control how much of the text is visible. This simple tool keeps the rest hidden so you can test your memory.`;
+const DEFAULT_TEXT = `Memorize your favourite passages by revealing them as you scroll. Paste or type any text below and use the
+ scrollable panel to control how much of the text is visible. This simple tool keeps the rest hidden so you can test your memory
+.`;
+
+const MIN_SCROLL_LENGTH = 400;
+const MAX_SCROLL_LENGTH = 6000;
+const WORD_SCROLL_RATIO = 12;
+
+function computeScrollLength(wordCount) {
+  const estimated = wordCount * WORD_SCROLL_RATIO;
+  return Math.max(MIN_SCROLL_LENGTH, Math.min(MAX_SCROLL_LENGTH, estimated));
+}
 
 function buildTokens(text) {
   if (!text) {
@@ -27,59 +38,93 @@ function buildTokens(text) {
 
 function App() {
   const [text, setText] = useState(DEFAULT_TEXT);
-  const containerRef = useRef(null);
   const tokens = useMemo(() => buildTokens(text), [text]);
   const totalWords = useMemo(
     () => tokens.reduce((count, token) => (token.isWord ? count + 1 : count), 0),
     [tokens],
   );
   const [visibleWords, setVisibleWords] = useState(totalWords);
+  const [isCustomScrollLength, setIsCustomScrollLength] = useState(false);
+  const [scrollLength, setScrollLength] = useState(() => computeScrollLength(totalWords));
 
   const updateVisibleWords = useCallback(() => {
-    const element = containerRef.current;
+    if (typeof window === 'undefined' || typeof document === 'undefined' || !document.documentElement) {
+      return;
+    }
 
-    if (!element || totalWords === 0) {
+    if (totalWords === 0) {
       setVisibleWords(totalWords);
       return;
     }
 
-    const { scrollTop, scrollHeight, clientHeight } = element;
+    const totalScrollableHeight = document.documentElement.scrollHeight;
+    const viewportHeight = window.innerHeight;
+    const scrollable = totalScrollableHeight - viewportHeight;
 
-    if (scrollHeight === 0) {
+    if (scrollable <= 0) {
       setVisibleWords(totalWords);
       return;
     }
 
-    const progress = Math.min(1, (scrollTop + clientHeight) / scrollHeight);
-    const adjustedProgress = clientHeight >= scrollHeight ? 1 : Math.max(progress, clientHeight / scrollHeight);
-    const visible = Math.ceil(adjustedProgress * totalWords);
-    const clamped = Math.min(Math.max(visible, 0), totalWords);
-    setVisibleWords(clamped);
+    const baseline = Math.min(1, viewportHeight / totalScrollableHeight);
+    const rawProgress = scrollable > 0 ? window.scrollY / scrollable : 1;
+    const progress = Math.min(1, Math.max(rawProgress, baseline));
+    const visible = Math.ceil(progress * totalWords);
+    setVisibleWords(Math.min(Math.max(visible, 0), totalWords));
   }, [totalWords]);
 
   useEffect(() => {
-    const element = containerRef.current;
-    if (!element) {
+    if (typeof window === 'undefined') {
       return undefined;
     }
 
+    window.addEventListener('scroll', updateVisibleWords, { passive: true });
     updateVisibleWords();
-    element.addEventListener('scroll', updateVisibleWords);
 
     return () => {
-      element.removeEventListener('scroll', updateVisibleWords);
+      window.removeEventListener('scroll', updateVisibleWords);
     };
-  }, [updateVisibleWords, text]);
+  }, [updateVisibleWords]);
 
   useEffect(() => {
-    const element = containerRef.current;
-    if (!element) {
+    if (!isCustomScrollLength) {
+      setScrollLength(computeScrollLength(totalWords));
+    }
+  }, [totalWords, isCustomScrollLength]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
       return;
     }
 
-    element.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'auto' });
     requestAnimationFrame(updateVisibleWords);
   }, [text, updateVisibleWords]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    requestAnimationFrame(updateVisibleWords);
+  }, [scrollLength, updateVisibleWords]);
+
+  useEffect(() => {
+    setVisibleWords((prev) => (prev > totalWords ? totalWords : prev));
+  }, [totalWords]);
+
+  const handleScrollLengthChange = (value) => {
+    setIsCustomScrollLength(true);
+    setScrollLength(value);
+  };
+
+  const handleResetScrollLength = () => {
+    setIsCustomScrollLength(false);
+    setScrollLength(computeScrollLength(totalWords));
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(updateVisibleWords);
+    }
+  };
 
   return (
     <div className="app">
@@ -104,11 +149,54 @@ function App() {
             placeholder="Paste or type your text here..."
             rows={10}
           />
+
+          <div className="app__controls">
+            <label htmlFor="scroll-length" className="app__label app__label--small">
+              Scroll length (px)
+            </label>
+            <div className="app__range">
+              <input
+                id="scroll-length"
+                type="range"
+                min={MIN_SCROLL_LENGTH}
+                max={MAX_SCROLL_LENGTH}
+                step={20}
+                value={scrollLength}
+                onChange={(event) => handleScrollLengthChange(Number(event.target.value))}
+              />
+              <input
+                className="app__numberInput"
+                type="number"
+                min={MIN_SCROLL_LENGTH}
+                max={MAX_SCROLL_LENGTH}
+                value={scrollLength}
+                onChange={(event) =>
+                  handleScrollLengthChange(
+                    Math.min(
+                      MAX_SCROLL_LENGTH,
+                      Math.max(MIN_SCROLL_LENGTH, Number(event.target.value) || MIN_SCROLL_LENGTH),
+                    ),
+                  )
+                }
+              />
+            </div>
+            <button
+              type="button"
+              className="app__resetButton"
+              onClick={handleResetScrollLength}
+              disabled={!isCustomScrollLength}
+            >
+              Use automatic length
+            </button>
+            <p className="app__helper">
+              Scroll down the page to reveal more of the text. Reach the bottom of the page to show every word.
+            </p>
+          </div>
         </section>
 
         <section className="app__preview">
           <h2>Scroll to reveal</h2>
-          <div ref={containerRef} className="app__previewBox">
+          <div className="app__previewBox">
             <p className="app__text">
               {tokens.map((token, index) => {
                 const shouldShow = !token.isWord || token.wordIndex < visibleWords;
@@ -130,6 +218,7 @@ function App() {
           </div>
         </section>
       </main>
+      <div className="app__scrollSpace" style={{ height: `${scrollLength}px` }} aria-hidden="true" />
     </div>
   );
 }

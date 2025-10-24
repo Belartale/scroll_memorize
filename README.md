@@ -4,7 +4,18 @@ A single-page tool that helps you memorize passages by revealing text as you scr
 
 ## Usage
 
-Open `index.html` in any modern browser. No build step or server is required. The page loads with sample text so you can immediately try the scrolling behaviour.
+Install the dependencies and start the Vite dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Run a production build. The deployable assets are written to the `build/` folder.
+
+```bash
+npm run build
+```
 
 * Use the textarea to enter the content you want to memorize.
 * Drag the range slider or type into the number field to control the scroll length. Select **Use automatic length** to return to the recommended value.

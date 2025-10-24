@@ -1,3 +1,5 @@
+import './style.css';
+
 const DEFAULT_TEXT = `Memorize your favourite passages by revealing them as you scroll. Paste or type any text below and use the scrollable panel to control how much of the text is visible. This simple tool keeps the rest hidden so you can test your memory.`;
 
 const MIN_SCROLL_LENGTH = 400;

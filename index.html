@@ -2,67 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scroll Memorize</title>
-    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app">
-      <header class="app__header">
-        <h1>Scroll Memorize</h1>
-        <p>
-          Paste text into the editor and scroll the preview panel. The amount of text you have scrolled
-          through remains visible while the rest stays hidden.
-        </p>
-      </header>
-
-      <main class="app__content">
-        <section class="app__input">
-          <label for="text-input" class="app__label">Text to memorize</label>
-          <textarea
-            id="text-input"
-            class="app__textarea"
-            placeholder="Paste or type your text here..."
-            rows="10"
-          ></textarea>
-
-          <div class="app__controls">
-            <label for="scroll-length-range" class="app__label app__label--small">Scroll length (px)</label>
-            <div class="app__range">
-              <input
-                id="scroll-length-range"
-                type="range"
-                min="400"
-                max="6000"
-                step="20"
-              />
-              <input
-                id="scroll-length-number"
-                class="app__numberInput"
-                type="number"
-                min="400"
-                max="6000"
-              />
-            </div>
-            <button type="button" class="app__resetButton" id="reset-scroll-length">Use automatic length</button>
-            <p class="app__helper">
-              Scroll down the page to reveal more of the text. Reach the bottom of the page to show every word.
-            </p>
-          </div>
-        </section>
-
-        <section class="app__preview">
-          <h2>Scroll to reveal</h2>
-          <div class="app__previewBox">
-            <p class="app__text" id="preview-text"></p>
-          </div>
-          <div class="app__stats" id="stats"></div>
-        </section>
-      </main>
-
-      <div class="app__scrollSpace" id="scroll-space" aria-hidden="true"></div>
-    </div>
-
-    <script type="module" src="./main.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
